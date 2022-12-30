@@ -2,7 +2,7 @@
 
 0. [準備](0_preparation/index.md)
 1. [転置インデックスとマッチング](1_inverted_index_and_matching/index.md)
-2. ランキング
+2. [ランキング](2_ranking/index.md)
 3. 定量評価と検定
 4. UIと定性評価
 5. Learning to Rank
