@@ -72,6 +72,8 @@ class SearchEngine(BaseHTTPRequestHandler):
 
         if self.path.startswith('/update'):
             SearchEngine.segments.append(Segment(json.loads(contents)))
+            for old_segment in SearchEngine.segments[:-1]:
+                old_segment.liveness_id -= SearchEngine.segments[-1].liveness_id
             result['success'] = 'updated {0} products'.format(len(SearchEngine.segments[-1].info_title))
 
         else:
