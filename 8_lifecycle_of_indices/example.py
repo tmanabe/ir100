@@ -14,7 +14,7 @@ EOS''')
 
 assert 0 == system('curl http://127.0.0.1:8080/select?query=b')
 
-print(1)
+print('1')
 
 assert 0 == system('''curl -X POST http://127.0.0.1:8080/update --data-binary @- << EOS
 [
@@ -23,4 +23,9 @@ assert 0 == system('''curl -X POST http://127.0.0.1:8080/update --data-binary @-
 ]
 EOS''')
 
+assert 0 == system('curl http://127.0.0.1:8080/select?query=c')
+
+print('2')
+
+assert 0 == system('curl http://127.0.0.1:8080/delete?product_id=v')
 assert 0 == system('curl http://127.0.0.1:8080/select?query=c')

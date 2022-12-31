@@ -13,7 +13,7 @@ import json
 
 class Segment:
     def __init__(self, products):
-        self.inverted_index_title, self.info_title = {}, {}
+        self.inverted_index_title, self.info_title, self.liveness_id = {}, {}, set()
         for product in sorted(products, key=lambda product: product['product_id']):
             product_id, product_title = product['product_id'], product['product_title']
             # Ref: 2.0
@@ -29,7 +29,12 @@ class Segment:
                 else:
                     self.inverted_index_title[word] = [(product_id, count)]
             self.info_title[product_id] = product_title
+            self.liveness_id.add(product_id)
 
+    def select_iterator(self, word):
+        for entry in self.inverted_index_title.get(word, []):
+            if entry[0] in self.liveness_id:
+                yield entry
 
 # Ref: 2.2
 class PriorityQueue:
@@ -77,11 +82,17 @@ class SearchEngine(BaseHTTPRequestHandler):
     def do_GET(self):
         response, result, parameters = 200, {}, parse_qs(urlparse(self.path).query)
 
-        if self.path.startswith('/select'):
+        if self.path.startswith('/delete'):
+            product_ids = set(parameters['product_id'])
+            for segment in SearchEngine.segments:
+                segment.liveness_id -= product_ids
+            result['success'] = 'deleted {0} products if exist'.format(len(product_ids))
+
+        elif self.path.startswith('/select'):
             priority_queue, ranking = PriorityQueue(10), []
             assert 1 == len(parameters['query'])
             for segment_index, segment in enumerate(SearchEngine.segments):
-                for product_id, tf in segment.inverted_index_title.get(parameters['query'][0], []):
+                for product_id, tf in segment.select_iterator(parameters['query'][0]):
                     priority_queue.push((tf, product_id, segment_index))
             while 0 < len(priority_queue.body):
                 priority, product_id, segment_index = priority_queue.pop()
