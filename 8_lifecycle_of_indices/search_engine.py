@@ -50,6 +50,8 @@ class Segment:
 
         new_segment.liveness_id = old_segment_i.liveness_id | old_segment_j.liveness_id
 
+        segments.append(new_segment)
+
     def __init__(self, products):
         self.inverted_index_title, self.info_title, self.liveness_id = {}, {}, set()
         for product in sorted(products, key=lambda product: product['product_id']):

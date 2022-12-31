@@ -27,7 +27,7 @@ for product_title in df_products['product_title']:
 
 assert 912923 == len(dictionary)
 
-# 2
+print('2')
 
 df_products.sort_values('product_id', inplace=True)
 
@@ -65,7 +65,7 @@ from pickle import load
 with open('inverted_index.pickle', 'rb') as i:
     inverted_index_title = load(i)
 
-# 5
+print('5')
 
 
 def boolean_and(list_i, list_j):
@@ -91,7 +91,7 @@ assert 3 == len(result5)
 
 assert sorted(set(inverted_index_title['Information']) & set(inverted_index_title['Science'])) == result5  # Test
 
-# 6
+print('6')
 
 
 def boolean_or(list_i, list_j):
@@ -122,7 +122,7 @@ assert 129 == len(result6)
 
 assert sorted(set(inverted_index_title['Information']) | set(inverted_index_title['Retrieval'])) == result6  # Test
 
-# 7
+print('7')
 
 
 def boolean_and_not(list_i, list_j):
