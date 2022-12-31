@@ -12,11 +12,49 @@ import json
 
 
 class Segment:
+    @classmethod
+    def merge(cls, segments):
+        # Cf. 1.6
+        def merge(iterator_i, iterator_j):
+            result = []
+            try:
+                entry_i, entry_j = next(iterator_i), next(iterator_j)
+                while True:
+                    if entry_i < entry_j:
+                        result.append(entry_i)
+                        entry_i = next(iterator_i)
+                    else:
+                        result.append(entry_j)
+                        entry_j = next(iterator_j)
+            except StopIteration:
+                for entry_i in iterator_i:
+                    result.append(entry_i)
+                for entry_j in iterator_j:
+                    result.append(entry_j)
+            return result
+
+        segments.sort(key=lambda segment: -len(segment.liveness_id))
+        new_segment, old_segment_i, old_segment_j = Segment([]), segments.pop(), segments.pop()
+
+        new_segment.inverted_index_title = old_segment_j.inverted_index_title.copy()
+        for word, posting_list_i in old_segment_i.inverted_index_title.items():
+            if word in new_segment.inverted_index_title:
+                new_segment.inverted_index_title[word] = merge(old_segment_i.select_iterator(word), old_segment_j.select_iterator(word))
+            else:
+                new_segment.inverted_index_title[word] = posting_list_i
+
+        for segment in (old_segment_i, old_segment_j):
+            for product_id, info in segment.info_title.items():
+                if product_id in segment.liveness_id:
+                    new_segment.info_title[product_id] = info
+
+        new_segment.liveness_id = old_segment_i.liveness_id | old_segment_j.liveness_id
+
     def __init__(self, products):
         self.inverted_index_title, self.info_title, self.liveness_id = {}, {}, set()
         for product in sorted(products, key=lambda product: product['product_id']):
             product_id, product_title = product['product_id'], product['product_title']
-            # Ref: 2.0
+            # Cf. 2.0
             counter = {}
             for word in product_title.split():
                 if word in counter:
@@ -36,7 +74,7 @@ class Segment:
             if entry[0] in self.liveness_id:
                 yield entry
 
-# Ref: 2.2
+# Cf. 2.2
 class PriorityQueue:
     def __init__(self, size):
         assert 0 < size
@@ -75,6 +113,8 @@ class SearchEngine(BaseHTTPRequestHandler):
             for old_segment in SearchEngine.segments[:-1]:
                 old_segment.liveness_id -= SearchEngine.segments[-1].liveness_id
             result['success'] = 'updated {0} products'.format(len(SearchEngine.segments[-1].info_title))
+            if 10 < len(SearchEngine.segments):
+                Segment.merge(SearchEngine.segments)
 
         else:
             response, result['error'] = 404, 'unknown POST endpoint'
@@ -115,7 +155,6 @@ class SearchEngine(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'text/json')
         self.end_headers()
         self.wfile.write(json.dumps(result, indent=4).encode('utf-8'))
-        self.wfile.write('\n'.encode('utf-8'))
 
 
 if __name__ == '__main__':
