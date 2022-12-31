@@ -59,15 +59,15 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 class SearchEngine(BaseHTTPRequestHandler):
     @classmethod
     def run(cls, host, port):
-        cls.segment = Segment([])
+        cls.segments = []
         ThreadedHTTPServer((host, port), cls).serve_forever()
 
     def do_POST(self):
         response, result, contents = 200, {}, self.rfile.read(int(self.headers['content-length'])).decode('utf-8')
 
         if self.path.startswith('/update'):
-            SearchEngine.segment = Segment(json.loads(contents))
-            result['success'] = 'updated {0} products'.format(len(self.segment.info_title))
+            SearchEngine.segments.append(Segment(json.loads(contents)))
+            result['success'] = 'updated {0} products'.format(len(SearchEngine.segments[-1].info_title))
 
         else:
             response, result['error'] = 404, 'unknown POST endpoint'
@@ -80,14 +80,15 @@ class SearchEngine(BaseHTTPRequestHandler):
         if self.path.startswith('/select'):
             priority_queue, ranking = PriorityQueue(10), []
             assert 1 == len(parameters['query'])
-            for product_id, tf in SearchEngine.segment.inverted_index_title[parameters['query'][0]]:
-                priority_queue.push((tf, product_id))
+            for segment_index, segment in enumerate(SearchEngine.segments):
+                for product_id, tf in segment.inverted_index_title.get(parameters['query'][0], []):
+                    priority_queue.push((tf, product_id, segment_index))
             while 0 < len(priority_queue.body):
-                priority, product_id = priority_queue.pop()
+                priority, product_id, segment_index = priority_queue.pop()
                 ranking.append({
                     '_priority': priority,
                     'product_id': product_id,
-                    'product_title': SearchEngine.segment.info_title[product_id],
+                    'product_title': SearchEngine.segments[segment_index].info_title[product_id],
                 })
             result['success'] = ranking
 
