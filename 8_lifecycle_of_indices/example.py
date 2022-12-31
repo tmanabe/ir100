@@ -50,10 +50,11 @@ update([
 ])
 select('c')
 
-# 5
+# Omit 4.
 
 from os import chdir
 from os.path import dirname
+from time import time
 
 chdir(dirname(dirname(__file__)))
 chdir('./esci-data/shopping_queries_dataset')
@@ -62,12 +63,16 @@ import pandas as pd
 
 df_products = pd.read_parquet('shopping_queries_dataset_products.parquet')
 df_products = df_products['us' == df_products.product_locale]
+post_size = len(df_products) // 100
 
-buffer = []
-for product_id, product_title in zip(df_products['product_id'], df_products['product_title']):
-    buffer.append({'product_id': product_id, 'product_title': product_title})
-    if 10000 < len(buffer):
+for i in ('5', '6'):
+    print(i)
+    buffer, start = [], time()
+    for product_id, product_title in zip(df_products['product_id'], df_products['product_title']):
+        buffer.append({'product_id': product_id, 'product_title': product_title})
+        if post_size <= len(buffer):
+            update(buffer, verbose=False)
+            buffer = []
+    if 0 < len(buffer):
         update(buffer, verbose=False)
-        buffer = []
-if 0 < len(buffer):
-    update(buffer, verbose=False)
+    print('Elapsed Time: {0} (s)'.format(time() - start))
