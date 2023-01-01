@@ -126,6 +126,13 @@ class Router(BaseHTTPRequestHandler):
                     port += 1
                     url = 'http://{0}:{1}/truncate'.format(Router.arg_dict.host, port)
                     result['success'][url] = json.loads(get(url).text)
+            if 'new_shards' in parameters:
+                assert 1 == len(parameters['new_shards'])
+                Router.arg_dict.shards = int(parameters['new_shards'][0])
+            if 'new_replicas' in parameters:
+                assert 1 == len(parameters['new_replicas'])
+                Router.arg_dict.replicas = int(parameters['new_replicas'][0])
+                Router.tpe = ThreadPoolExecutor(Router.arg_dict.replicas)
 
         elif self.path.startswith('/two_stage_select'):
             def fn_select(query):

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from concurrent.futures import ThreadPoolExecutor
 from requests import get
 from requests import post
 
@@ -38,27 +39,41 @@ post_size = len(df_products) // 100
 
 print('2')
 
-for _ in range(2):
-    buffer, start = [], time()
 
-    for product_id, product_title in zip(df_products['product_id'], df_products['product_title']):
-        buffer.append({'product_id': product_id, 'product_title': product_title})
-        if post_size <= len(buffer):
+def do_8_5():
+    for _ in range(2):
+        buffer, start = [], time()
+
+        for product_id, product_title in zip(df_products['product_id'], df_products['product_title']):
+            buffer.append({'product_id': product_id, 'product_title': product_title})
+            if post_size <= len(buffer):
+                update(buffer)
+                buffer = []
+
+        if 0 < len(buffer):
             update(buffer)
-            buffer = []
+        print('Elapsed Time: {0} (s)'.format(time() - start))
 
-    if 0 < len(buffer):
-        update(buffer)
-    print('Elapsed Time: {0} (s)'.format(time() - start))
+
+do_8_5()
 
 print('4')
 
-start = time()
 
-for query in queries():
-    select(query)
+def do_8_6(max_workers=1):
+    def fn(query):
+        select(query)
 
-print('Elapsed Time: {0} (s)'.format(time() - start))
+    start = time()
+
+    with ThreadPoolExecutor(max_workers=max_workers) as tpe:
+        for query in queries():
+            tpe.submit(fn, query)
+
+    print('Elapsed Time: {0} (s)'.format(time() - start))
+
+
+do_8_6()
 
 print('5')
 
@@ -68,3 +83,13 @@ for query in queries():
     two_stage_select(query)
 
 print('Elapsed Time: {0} (s)'.format(time() - start))
+
+print('6')
+
+get('http://127.0.0.1:8080/truncate', params={'new_replicas': '2'})
+
+do_8_5()
+
+print('7')
+
+do_8_6(8)

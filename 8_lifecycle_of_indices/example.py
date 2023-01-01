@@ -99,7 +99,3 @@ for attempt in ('6', '7'):
         select(query, verbose=False)
 
     print('Elapsed Time: {0} (s)'.format(time() - start))
-
-# Omit 8.
-
-# Omit 9.
