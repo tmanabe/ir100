@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
+from hashlib import md5
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 from socketserver import ThreadingMixIn
@@ -133,7 +134,7 @@ class SearchEngine(BaseHTTPRequestHandler):
             result['success'] = 'deleted {0} products if exist'.format(len(product_ids))
 
         # Cf. 9.5
-        if self.path.startswith('/fetch'):
+        elif self.path.startswith('/fetch'):
             result['success'] = []
             for product_id in parameters['product_id']:
                 for segment in SearchEngine.segments:
@@ -141,10 +142,20 @@ class SearchEngine(BaseHTTPRequestHandler):
                         result['success'].append(segment.info_title[product_id])
                         break
 
-        if self.path.startswith('/optimize'):
+        elif self.path.startswith('/optimize'):
             while (1 < len(SearchEngine.segments)):
                 Segment.merge(SearchEngine.segments)
             result['success'] = 'optimized'
+
+        elif self.path.startswith('/queries'):
+            queries = set()
+            for segment in SearchEngine.segments:
+                queries |= set(segment.inverted_index_title.keys())
+            result['success'] = []
+            for query in sorted(queries):
+                query_hash = int(md5(query.encode('utf-8')).hexdigest(),  16)
+                if 0 == query_hash % 100:
+                    result['success'].append(query)
 
         elif self.path.startswith('/select'):
             priority_queue, ranking = PriorityQueue(10), []
@@ -162,15 +173,6 @@ class SearchEngine(BaseHTTPRequestHandler):
                 if 'omit_product_title' not in parameters:
                     ranking[-1]['product_title'] = SearchEngine.segments[segment_index].info_title[product_id]
             result['success'] = ranking
-
-        elif self.path.startswith('/terms'):
-            result_set = set()
-            for segment in SearchEngine.segments:
-                result_set |= set(segment.inverted_index_title.keys())
-            result['success'] = []
-            for i, word in enumerate(sorted(result_set)):
-                if 0 == i % 100:
-                    result['success'].append(word)
 
         elif self.path.startswith('/truncate'):
             SearchEngine.segments = []

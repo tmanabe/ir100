@@ -1,8 +1,20 @@
 #!/usr/bin/env python3
 
+from requests import get
 from requests import post
 
 import json
+
+
+def queries():
+    response = get('http://127.0.0.1:8080/queries')
+    return json.loads(response.text)['success']
+
+
+def select(query, verbose=True):
+    response = get('http://127.0.0.1:8080/select', params={'query': query})
+    if verbose:
+        print(response.text)
 
 
 def update(json_object, verbose=True):
@@ -38,3 +50,12 @@ for _ in range(2):
     if 0 < len(buffer):
         update(buffer, verbose=False)
     print('Elapsed Time: {0} (s)'.format(time() - start))
+
+print('4')
+
+start = time()
+
+for query in queries():
+    select(query, verbose=False)
+
+print('Elapsed Time: {0} (s)'.format(time() - start))

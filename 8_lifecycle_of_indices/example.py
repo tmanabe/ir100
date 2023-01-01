@@ -16,15 +16,15 @@ def optimize():
     print(response.text)
 
 
-def select(word, verbose=True):
-    response = get('http://127.0.0.1:8080/select', params={'query': word})
+def queries():
+    response = get('http://127.0.0.1:8080/queries')
+    return json.loads(response.text)['success']
+
+
+def select(query, verbose=True):
+    response = get('http://127.0.0.1:8080/select', params={'query': query})
     if verbose:
         print(response.text)
-
-
-def terms():
-    response = get('http://127.0.0.1:8080/terms')
-    return json.loads(response.text)['success']
 
 
 def update(json_object, verbose=True):
@@ -95,8 +95,8 @@ for attempt in ('6', '7'):
         optimize()
     start = time()
 
-    for word in terms():
-        select(word, verbose=False)
+    for query in queries():
+        select(query, verbose=False)
 
     print('Elapsed Time: {0} (s)'.format(time() - start))
 
