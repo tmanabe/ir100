@@ -93,24 +93,24 @@ class Router(BaseHTTPRequestHandler):
 
         elif self.path.startswith('/select'):
             def fn(query):
-                result, replica_index = {}, int(current_thread().name.rsplit('-', 1)[-1])
+                result, replica_index = [], int(current_thread().name.rsplit('-', 1)[-1])
                 with ThreadPoolExecutor(max_workers=Router.arg_dict.shards) as tpe:
                     def fn(query, shard_index, replica_index):
                         port = Router.arg_dict.port + 1 + shard_index * Router.arg_dict.replicas + replica_index
                         url = 'http://{0}:{1}/select'.format(Router.arg_dict.host, port)
-                        return {url: json.loads(get(url, params={'query': query}).text)}
+                        return json.loads(get(url, params={'query': query}).text)['success']
 
                     fs = []
                     for shard_index in range(Router.arg_dict.shards):
-                        fs.append(tpe.submit(fn, query=query, shard_index=shard_index, replica_index=replica_index))
+                        fs.append(tpe.submit(fn, query, shard_index, replica_index))
                     for f in as_completed(fs):
-                        result.update(f.result())
+                        result.append(f.result())
                 return result
 
             assert 1 == len(parameters['query'])
-            priority_queue = PriorityQueue(10)
-            for partial_result in Router.tpe.submit(fn, query=parameters['query'][0]).result().values():
-                for product in partial_result['success']:
+            priority_queue, query = PriorityQueue(10), parameters['query'][0]
+            for partial_result in Router.tpe.submit(fn, query).result():
+                for product in partial_result:
                     priority_queue.push((product['_priority'], product['product_id'], product))
             ranking = []
             while 0 < len(priority_queue.body):
@@ -126,6 +126,57 @@ class Router(BaseHTTPRequestHandler):
                     port += 1
                     url = 'http://{0}:{1}/truncate'.format(Router.arg_dict.host, port)
                     result['success'][url] = json.loads(get(url).text)
+
+        elif self.path.startswith('/two_stage_select'):
+            def fn_select(query):
+                result, replica_index = {}, int(current_thread().name.rsplit('-', 1)[-1])
+                with ThreadPoolExecutor(max_workers=Router.arg_dict.shards) as tpe:
+                    def fn(query, shard_index, replica_index):
+                        port = Router.arg_dict.port + 1 + shard_index * Router.arg_dict.replicas + replica_index
+                        url = 'http://{0}:{1}/select'.format(Router.arg_dict.host, port)
+                        return {shard_index: json.loads(get(url, params={'omit_detail': 'y', 'query': query}).text)['success']}
+
+                    fs = []
+                    for shard_index in range(Router.arg_dict.shards):
+                        fs.append(tpe.submit(fn, query, shard_index, replica_index))
+                    for f in as_completed(fs):
+                        result.update(f.result())
+                return result
+
+            def fn_fetch(shard_index_to_product_ids):
+                result, replica_index = {}, int(current_thread().name.rsplit('-', 1)[-1])
+                with ThreadPoolExecutor(max_workers=Router.arg_dict.shards) as tpe:
+                    def fn(shard_index, product_ids):
+                        port = Router.arg_dict.port + 1 + shard_index * Router.arg_dict.replicas + replica_index
+                        url = 'http://{0}:{1}/fetch'.format(Router.arg_dict.host, port)
+                        product_titles = json.loads(get(url, params={'product_id': product_ids}).text)['success']
+                        return dict(zip(product_ids, product_titles))
+
+                    fs = []
+                    for shard_index, product_ids in shard_index_to_product_ids.items():
+                        fs.append(tpe.submit(fn, shard_index, product_ids))
+                    for f in as_completed(fs):
+                        result.update(f.result())
+                return result
+
+            assert 1 == len(parameters['query'])
+            priority_queue, query = PriorityQueue(10), parameters['query'][0]
+            for shard_index, partial_result in Router.tpe.submit(fn_select, query).result().items():
+                for product in partial_result:
+                    assert 'product_title' not in product
+                    priority_queue.push((product['_priority'], product['product_id'], shard_index, product))
+            shard_index_to_product_ids, ranking = {}, []
+            while 0 < len(priority_queue.body):
+                _, product_id, shard_index, product = priority_queue.pop()
+                if shard_index in shard_index_to_product_ids:
+                    shard_index_to_product_ids[shard_index].append(product_id)
+                else:
+                    shard_index_to_product_ids[shard_index] = [product_id]
+                ranking.append(product)
+            product_id_to_title = Router.tpe.submit(fn_fetch, shard_index_to_product_ids).result()
+            for product in ranking:
+                product['product_title'] = product_id_to_title[product['product_id']]
+            result['success'] = ranking
 
         else:
             response, result['error'] = 404, 'unknown GET endpoint'

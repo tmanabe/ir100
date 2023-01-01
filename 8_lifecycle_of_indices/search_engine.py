@@ -170,7 +170,7 @@ class SearchEngine(BaseHTTPRequestHandler):
                     'product_id': product_id,
                 })
                 # Cf. 9.5
-                if 'omit_product_title' not in parameters:
+                if 'omit_detail' not in parameters:
                     ranking[-1]['product_title'] = SearchEngine.segments[segment_index].info_title[product_id]
             result['success'] = ranking
 

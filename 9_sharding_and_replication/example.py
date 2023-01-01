@@ -11,16 +11,16 @@ def queries():
     return json.loads(response.text)['success']
 
 
-def select(query, verbose=True):
-    response = get('http://127.0.0.1:8080/select', params={'query': query})
-    if verbose:
-        print(response.text)
+def select(query):
+    get('http://127.0.0.1:8080/select', params={'query': query})
 
 
-def update(json_object, verbose=True):
-    response = post('http://127.0.0.1:8080/update', data=json.dumps(json_object))
-    if verbose:
-        print(response.text)
+def two_stage_select(query):
+    get('http://127.0.0.1:8080/two_stage_select', params={'query': query})
+
+
+def update(json_object):
+    post('http://127.0.0.1:8080/update', data=json.dumps(json_object))
 
 
 from os import chdir
@@ -44,11 +44,11 @@ for _ in range(2):
     for product_id, product_title in zip(df_products['product_id'], df_products['product_title']):
         buffer.append({'product_id': product_id, 'product_title': product_title})
         if post_size <= len(buffer):
-            update(buffer, verbose=False)
+            update(buffer)
             buffer = []
 
     if 0 < len(buffer):
-        update(buffer, verbose=False)
+        update(buffer)
     print('Elapsed Time: {0} (s)'.format(time() - start))
 
 print('4')
@@ -56,6 +56,15 @@ print('4')
 start = time()
 
 for query in queries():
-    select(query, verbose=False)
+    select(query)
+
+print('Elapsed Time: {0} (s)'.format(time() - start))
+
+print('5')
+
+start = time()
+
+for query in queries():
+    two_stage_select(query)
 
 print('Elapsed Time: {0} (s)'.format(time() - start))
