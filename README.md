@@ -9,4 +9,4 @@
 6. 近似最近傍探索とベクトル類似検索
 7. 自然言語処理
 8. [インデックスのライフサイクル](8_lifecycle_of_indices/index.md)
-9. シャーディング
+9. [シャーディングとレプリケーション](9_sharding_and_replication/index.md)

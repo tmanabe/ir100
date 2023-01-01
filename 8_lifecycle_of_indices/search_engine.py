@@ -132,6 +132,15 @@ class SearchEngine(BaseHTTPRequestHandler):
                 segment.liveness_id -= product_ids
             result['success'] = 'deleted {0} products if exist'.format(len(product_ids))
 
+        # Cf. 9.5
+        if self.path.startswith('/fetch'):
+            result['success'] = []
+            for product_id in parameters['product_id']:
+                for segment in SearchEngine.segments:
+                    if product_id in segment.liveness_id:
+                        result['success'].append(segment.info_title[product_id])
+                        break
+
         if self.path.startswith('/optimize'):
             while (1 < len(SearchEngine.segments)):
                 Segment.merge(SearchEngine.segments)
@@ -148,8 +157,10 @@ class SearchEngine(BaseHTTPRequestHandler):
                 ranking.append({
                     '_priority': priority,
                     'product_id': product_id,
-                    'product_title': SearchEngine.segments[segment_index].info_title[product_id],
                 })
+                # Cf. 9.5
+                if 'omit_product_title' not in parameters:
+                    ranking[-1]['product_title'] = SearchEngine.segments[segment_index].info_title[product_id]
             result['success'] = ranking
 
         elif self.path.startswith('/terms'):
@@ -160,6 +171,10 @@ class SearchEngine(BaseHTTPRequestHandler):
             for i, word in enumerate(sorted(result_set)):
                 if 0 == i % 100:
                     result['success'].append(word)
+
+        elif self.path.startswith('/truncate'):
+            SearchEngine.segments = []
+            result['success'] = 'truncated'
 
         else:
             response, result['error'] = 404, 'unknown GET endpoint'
