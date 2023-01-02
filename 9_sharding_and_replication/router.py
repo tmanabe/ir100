@@ -52,6 +52,7 @@ class Router(BaseHTTPRequestHandler):
     def do_POST(self):
         response, result, contents = 200, {}, self.rfile.read(int(self.headers['content-length'])).decode('utf-8')
 
+        # 1., 6.
         if self.path.startswith('/update'):
             sharded_contents = []
             for _ in range(Router.arg_dict.shards):
@@ -91,6 +92,7 @@ class Router(BaseHTTPRequestHandler):
                 port += Router.arg_dict.replicas
             result['success'] = sorted(queries)
 
+        # 3., 7.
         elif self.path.startswith('/select'):
             def fn(query):
                 result, replica_index = [], int(current_thread().name.rsplit('-', 1)[-1])
@@ -134,6 +136,7 @@ class Router(BaseHTTPRequestHandler):
                 Router.arg_dict.replicas = int(parameters['new_replicas'][0])
                 Router.tpe = ThreadPoolExecutor(Router.arg_dict.replicas)
 
+        # 5.
         elif self.path.startswith('/two_stage_select'):
             def fn_select(query):
                 result, replica_index = {}, int(current_thread().name.rsplit('-', 1)[-1])

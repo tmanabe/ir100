@@ -13,9 +13,9 @@ import json
 
 
 class Segment:
+    # 4.
     @classmethod
     def merge(cls, segments):
-        # Cf. 1.6
         def merge(iterator_i, iterator_j):
             result = []
             try:
@@ -143,7 +143,7 @@ class SearchEngine(BaseHTTPRequestHandler):
                         break
 
         elif self.path.startswith('/optimize'):
-            while (1 < len(SearchEngine.segments)):
+            while 1 < len(SearchEngine.segments):
                 Segment.merge(SearchEngine.segments)
             result['success'] = 'optimized'
 

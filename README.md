@@ -4,7 +4,7 @@
 1. [転置インデックスとマッチング](1_inverted_index_and_matching/index.md)
 2. [ランキング](2_ranking/index.md)
 3. 定量評価と検定
-4. UIと定性評価
+4. ユーザインタフェースと定性評価
 5. Learning to Rank
 6. 近似最近傍探索とベクトル類似検索
 7. 自然言語処理
