@@ -1,37 +1,42 @@
 #!/usr/bin/env python3
 
 from os import chdir
+# from os import system
 from os.path import dirname
-
-chdir(dirname(dirname(__file__)))
-
-# 0
-
-from os import system
-
-assert 0 == system('brew install git-lfs')
-assert 0 == system('git lfs install')
-
-# 1
-
 from os.path import exists
-
-if not exists('esci-data'):
-    system('git clone git@github.com:amazon-science/esci-data.git')
-
-# 2
-
-assert 0 == system('pip3 install pandas')
-
-# 3
-
-chdir('./esci-data/shopping_queries_dataset')
-
 import pandas as pd
 
-df_products = pd.read_parquet('shopping_queries_dataset_products.parquet')
 
-# 4
+# For dry-run
+def system(cmd):
+    print(cmd)
+    return 0
 
-for _ in range(10):
-    print(df_products.sample())
+
+if __name__ == '__main__':
+    chdir(dirname(dirname(__file__)))
+
+    print('0.')
+    assert 0 == system('brew install git-lfs')
+    assert 0 == system('git lfs install')
+
+    if not exists('esci-data'):
+        print('1.')
+        system('git clone git@github.com:amazon-science/esci-data.git')
+
+    print('2.')
+    assert 0 == system('pip3 install pandas pyarrow fastparquet')
+
+    # 3.
+    df_products = pd.read_parquet('./esci-data/shopping_queries_dataset/shopping_queries_dataset_products.parquet')
+
+    print('4.')
+    for _ in range(5):
+        print(df_products.sample())
+
+    # 5.
+    df_examples = pd.read_parquet('./esci-data/shopping_queries_dataset/shopping_queries_dataset_examples.parquet')
+
+    print('6.')
+    for _ in range(5):
+        print(df_examples.sample())
