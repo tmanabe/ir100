@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from concurrent.futures import ThreadPoolExecutor
-from hashlib import md5
 from os import chdir
 from os.path import dirname
 from requests import get
@@ -36,9 +35,8 @@ if __name__ == '__main__':
     def answer8_5(inverse_sampling_ratio):
         for _ in range(2):
             buffer, start = [], time()
-            for product_id, product_title in zip(df_products['product_id'], df_products['product_title']):
-                product_hash = int(md5(product_id.encode('utf-8')).hexdigest(),  16)
-                if (0 == product_hash % inverse_sampling_ratio):
+            for i, (product_id, product_title) in enumerate(zip(df_products['product_id'], df_products['product_title'])):
+                if 0 == i % inverse_sampling_ratio:
                     buffer.append({'product_id': product_id, 'product_title': product_title})
                 if post_size <= len(buffer):
                     update(buffer)
@@ -48,7 +46,7 @@ if __name__ == '__main__':
             print('Elapsed Time: {0} (s)'.format(time() - start))
 
     truncate({'new_replicas': '1', 'new_shards': '2'})
-    answer8_5(4)
+    answer8_5(2)
 
     print('4.')
 
@@ -72,7 +70,7 @@ if __name__ == '__main__':
 
     print('6.')
     truncate({'new_replicas': '2', 'new_shards': '2'})
-    answer8_5(4)
+    answer8_5(2)
 
     print('7')
     answer8_6(2)
