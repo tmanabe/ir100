@@ -17,8 +17,12 @@ def queries():
     return json.loads(response.text)['success']
 
 
+def truncate(params={}):
+    get('http://127.0.0.1:8080/truncate', params)
+
+
 def update(json_object):
-    post('http://127.0.0.1:8080/update', data=json.dumps(json_object))
+    post('http://127.0.0.1:8080/update', json.dumps(json_object))
 
 
 if __name__ == '__main__':
@@ -29,7 +33,7 @@ if __name__ == '__main__':
 
     print('2.')
 
-    def answer8_5(inverse_sampling_ratio=1):
+    def answer8_5(inverse_sampling_ratio):
         for _ in range(2):
             buffer, start = [], time()
             for product_id, product_title in zip(df_products['product_id'], df_products['product_title']):
@@ -43,21 +47,22 @@ if __name__ == '__main__':
                 update(buffer)
             print('Elapsed Time: {0} (s)'.format(time() - start))
 
-    answer8_5()
+    truncate({'new_replicas': '1', 'new_shards': '2'})
+    answer8_5(4)
 
     print('4.')
 
-    def answer8_6(max_workers=1):
+    def answer8_6(max_workers):
         def fn(query):
             get('http://127.0.0.1:8080/select', params={'query': query})
 
         start = time()
-        with ThreadPoolExecutor(max_workers=max_workers) as tpe:
+        with ThreadPoolExecutor(max_workers) as tpe:
             for query in queries():
                 tpe.submit(fn, query)
         print('Elapsed Time: {0} (s)'.format(time() - start))
 
-    answer8_6()
+    answer8_6(1)
 
     print('5.')
     start = time()
@@ -66,8 +71,8 @@ if __name__ == '__main__':
     print('Elapsed Time: {0} (s)'.format(time() - start))
 
     print('6.')
-    get('http://127.0.0.1:8080/truncate', params={'new_replicas': '2'})
-    answer8_5(10)
+    truncate({'new_replicas': '2', 'new_shards': '2'})
+    answer8_5(4)
 
     print('7')
     answer8_6(2)

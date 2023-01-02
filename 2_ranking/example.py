@@ -3,30 +3,9 @@
 from math import log
 from os import chdir
 from os.path import dirname
+from priority_queue import PriorityQueue
 
-import heapq
 import pandas as pd
-
-
-# 1.
-class PriorityQueue:
-    def __init__(self, size):
-        assert 0 < size
-        self.body = []
-        self.size = size
-
-    def peek(self):
-        return self.body[0]
-
-    def push(self, item):
-        if len(self.body) < self.size:
-            heapq.heappush(self.body, item)
-        else:
-            if self.peek() < item:
-                heapq.heappushpop(self.body, item)
-
-    def pop(self):
-        return heapq.heappop(self.body)
 
 
 # 2.

@@ -4,11 +4,11 @@ from argparse import ArgumentParser
 from hashlib import md5
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
+from priority_queue import PriorityQueue
 from socketserver import ThreadingMixIn
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
-import heapq
 import json
 
 
@@ -16,37 +16,58 @@ class Segment:
     # 4.
     @classmethod
     def merge(cls, segments):
-        def merge(iterator_i, iterator_j):
-            result = []
+        def merge_inner(iterator_i, iterator_j):
             try:
-                entry_i, entry_j = next(iterator_i), next(iterator_j)
-                while True:
-                    if entry_i < entry_j:
-                        result.append(entry_i)
-                        entry_i = next(iterator_i)
-                    else:
-                        result.append(entry_j)
-                        entry_j = next(iterator_j)
+                entry_i = next(iterator_i)
             except StopIteration:
-                for entry_i in iterator_i:
+                return list(iterator_j)
+            try:
+                entry_j = next(iterator_j)
+            except StopIteration:
+                return list(iterator_i)
+            result = []
+            while True:
+                if entry_i < entry_j:
                     result.append(entry_i)
-                for entry_j in iterator_j:
+                    try:
+                        entry_i = next(iterator_i)
+                    except StopIteration:
+                        try:
+                            while True:
+                                result.append(entry_j)
+                                entry_j = next(iterator_j)
+                        except StopIteration:
+                            return result
+                else:
                     result.append(entry_j)
-            return result
+                    try:
+                        entry_j = next(iterator_j)
+                    except StopIteration:
+                        try:
+                            while True:
+                                result.append(entry_i)
+                                entry_i = next(iterator_i)
+                        except StopIteration:
+                            return result
 
         segments.sort(key=lambda segment: -len(segment.liveness_id))
         new_segment, old_segment_i, old_segment_j = Segment([]), segments.pop(), segments.pop()
 
-        new_segment.inverted_index_title = old_segment_j.inverted_index_title.copy()
-        for word, posting_list_i in old_segment_i.inverted_index_title.items():
-            if word in new_segment.inverted_index_title:
-                new_segment.inverted_index_title[word] = merge(old_segment_i.select_iterator(word), old_segment_j.select_iterator(word))
+        for word in old_segment_i.inverted_index_title.keys():
+            if word in old_segment_j.inverted_index_title:
+                posting_list = merge_inner(old_segment_i.live_iterator(word), old_segment_j.live_iterator(word))
             else:
-                new_segment.inverted_index_title[word] = posting_list_i
+                posting_list = list(old_segment_i.live_iterator(word))
+            if 0 < len(posting_list):
+                new_segment.inverted_index_title[word] = posting_list
+        for word in (old_segment_j.inverted_index_title.keys() - old_segment_i.inverted_index_title.keys()):
+            posting_list = list(old_segment_j.live_iterator(word))
+            if 0 < len(posting_list):
+                new_segment.inverted_index_title[word] = posting_list
 
-        for segment in (old_segment_i, old_segment_j):
-            for product_id, info in segment.info_title.items():
-                if product_id in segment.liveness_id:
+        for old_segment in (old_segment_i, old_segment_j):
+            for product_id, info in old_segment.info_title.items():
+                if product_id in old_segment.liveness_id:
                     new_segment.info_title[product_id] = info
 
         new_segment.liveness_id = old_segment_i.liveness_id | old_segment_j.liveness_id
@@ -72,30 +93,10 @@ class Segment:
             self.info_title[product_id] = product_title
             self.liveness_id.add(product_id)
 
-    def select_iterator(self, word):
+    def live_iterator(self, word):
         for entry in self.inverted_index_title.get(word, []):
             if entry[0] in self.liveness_id:
                 yield entry
-
-# Cf. 2.2
-class PriorityQueue:
-    def __init__(self, size):
-        assert 0 < size
-        self.body = []
-        self.size = size
-
-    def peek(self):
-        return self.body[0]
-
-    def push(self, item):
-        if len(self.body) < self.size:
-            heapq.heappush(self.body, item)
-        else:
-            if self.peek() < item:
-                heapq.heappushpop(self.body, item)
-
-    def pop(self):
-        return heapq.heappop(self.body)
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -112,12 +113,13 @@ class SearchEngine(BaseHTTPRequestHandler):
         response, result, contents = 200, {}, self.rfile.read(int(self.headers['content-length'])).decode('utf-8')
 
         if self.path.startswith('/update'):
-            SearchEngine.segments.append(Segment(json.loads(contents)))
-            for old_segment in SearchEngine.segments[:-1]:
-                old_segment.liveness_id -= SearchEngine.segments[-1].liveness_id
-            result['success'] = 'updated {0} products'.format(len(SearchEngine.segments[-1].info_title))
-            if 10 < len(SearchEngine.segments):
-                Segment.merge(SearchEngine.segments)
+            segments, new_segment = SearchEngine.segments, Segment(json.loads(contents))
+            for old_segment in segments:
+                old_segment.liveness_id -= new_segment.liveness_id
+            segments.append(new_segment)
+            if 10 < len(segments):
+                Segment.merge(segments)
+            result['success'] = 'updated {0} products'.format(len(new_segment.liveness_id))
 
         else:
             response, result['error'] = 404, 'unknown POST endpoint'
@@ -143,25 +145,26 @@ class SearchEngine(BaseHTTPRequestHandler):
                         break
 
         elif self.path.startswith('/optimize'):
-            while 1 < len(SearchEngine.segments):
-                Segment.merge(SearchEngine.segments)
+            segments = SearchEngine.segments
+            while 1 < len(segments):
+                Segment.merge(segments)
             result['success'] = 'optimized'
 
         elif self.path.startswith('/queries'):
             queries = set()
             for segment in SearchEngine.segments:
-                queries |= set(segment.inverted_index_title.keys())
+                queries |= segment.inverted_index_title.keys()
             result['success'] = []
             for query in sorted(queries):
-                query_hash = int(md5(query.encode('utf-8')).hexdigest(),  16)
+                query_hash = int(md5(query.encode('utf-8')).hexdigest(), 16)
                 if 0 == query_hash % 100:
                     result['success'].append(query)
 
         elif self.path.startswith('/select'):
-            priority_queue, ranking = PriorityQueue(10), []
+            segments, priority_queue, ranking = SearchEngine.segments, PriorityQueue(10), []
             assert 1 == len(parameters['query'])
-            for segment_index, segment in enumerate(SearchEngine.segments):
-                for product_id, tf in segment.select_iterator(parameters['query'][0]):
+            for segment_index, segment in enumerate(segments):
+                for product_id, tf in segment.live_iterator(parameters['query'][0]):
                     priority_queue.push((tf, product_id, segment_index))
             while 0 < len(priority_queue.body):
                 priority, product_id, segment_index = priority_queue.pop()
@@ -171,7 +174,7 @@ class SearchEngine(BaseHTTPRequestHandler):
                 })
                 # Cf. 9.5
                 if 'omit_detail' not in parameters:
-                    ranking[-1]['product_title'] = SearchEngine.segments[segment_index].info_title[product_id]
+                    ranking[-1]['product_title'] = segments[segment_index].info_title[product_id]
             result['success'] = ranking
 
         elif self.path.startswith('/truncate'):
