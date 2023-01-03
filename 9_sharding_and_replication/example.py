@@ -29,16 +29,18 @@ if __name__ == '__main__':
     parquet_path = './esci-data/shopping_queries_dataset/shopping_queries_dataset_products.parquet'
     df_products = pd.read_parquet(parquet_path, columns=['product_locale', 'product_id', 'product_title'])
     df_products = df_products['us' == df_products.product_locale]
+
+    df_products = df_products.sample(frac=0.5, random_state=0)
+
     post_size = len(df_products) // 100
 
     print('2.')
 
-    def answer8_5(inverse_sampling_ratio):
+    def answer8_5():
         for _ in range(2):
             buffer, start = [], time()
             for i, (product_id, product_title) in enumerate(zip(df_products['product_id'], df_products['product_title'])):
-                if 0 == i % inverse_sampling_ratio:
-                    buffer.append({'product_id': product_id, 'product_title': product_title})
+                buffer.append({'product_id': product_id, 'product_title': product_title})
                 if post_size <= len(buffer):
                     update(buffer)
                     buffer = []
@@ -47,7 +49,7 @@ if __name__ == '__main__':
             print('Elapsed Time: {0} (s)'.format(time() - start))
 
     truncate({'new_replicas': '1', 'new_shards': '2'})
-    answer8_5(2)
+    answer8_5()
 
     print('4.')
 
@@ -71,7 +73,7 @@ if __name__ == '__main__':
 
     print('6.')
     truncate({'new_replicas': '2', 'new_shards': '2'})
-    answer8_5(2)
+    answer8_5()
 
     print('7')
     answer8_6(2)
