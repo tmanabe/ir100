@@ -6,7 +6,7 @@
 3. 定量評価と検定
 4. ユーザインタフェースと定性評価
 5. Learning to Rank
-6. 近似最近傍探索とベクトル類似検索
+6. [近似最近傍探索とベクトル類似検索](6_ann_and_vector_similarity_search/index.md)
 7. 自然言語処理
 8. [インデックスのライフサイクル](8_lifecycle_of_indices/index.md)
 9. [シャーディングとレプリケーション](9_sharding_and_replication/index.md)
