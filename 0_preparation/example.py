@@ -40,3 +40,12 @@ if __name__ == '__main__':
     print('6.')
     for _ in range(5):
         print(df_examples.sample())
+
+    # 7.
+    df_products = df_products['us' == df_products.product_locale]
+    df_examples = df_examples['us' == df_examples.product_locale]
+
+    print('8.')
+    df_merged = pd.merge(df_products, df_examples, on='product_id')
+    for _ in range(5):
+        print(df_merged.sample())

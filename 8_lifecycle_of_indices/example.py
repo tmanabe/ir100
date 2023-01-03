@@ -66,7 +66,8 @@ if __name__ == '__main__':
 
     print('5.')
     chdir(dirname(dirname(__file__)))
-    df_products = pd.read_parquet('./esci-data/shopping_queries_dataset/shopping_queries_dataset_products.parquet')
+    parquet_path = './esci-data/shopping_queries_dataset/shopping_queries_dataset_products.parquet'
+    df_products = pd.read_parquet(parquet_path, columns=['product_locale', 'product_id', 'product_title'])
     df_products = df_products['us' == df_products.product_locale]
     post_size = len(df_products) // 100
     for _ in range(2):

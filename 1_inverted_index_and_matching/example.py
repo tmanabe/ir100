@@ -71,9 +71,9 @@ def boolean_and_not(list_i, list_j):
 
 if __name__ == '__main__':
     chdir(dirname(dirname(__file__)))
-    df_products = pd.read_parquet('./esci-data/shopping_queries_dataset/shopping_queries_dataset_products.parquet')
-
-    # 0.
+    parquet_path = './esci-data/shopping_queries_dataset/shopping_queries_dataset_products.parquet'
+    columns = ['product_locale', 'product_id', 'product_title', 'product_brand']
+    df_products = pd.read_parquet(parquet_path, columns=columns)
     df_products = df_products['us' == df_products.product_locale]
 
     # 1.
