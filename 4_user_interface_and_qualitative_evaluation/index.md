@@ -14,7 +14,7 @@
 
 `query` にスペース区切りで複数の単語を与えると、`product_title` 中に全ての単語を含む製品を返すようにせよ。
 
-## 2. ランキング改善
+## 2. 検索条件
 
 `/select` の際に `query` に加えて `sort=tf` をHTTP GETすると、「`query` 中の単語が `product_description` 中に出現する回数」の降順に10件までの製品情報を返すようにせよ。
 
