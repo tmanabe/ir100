@@ -47,7 +47,7 @@ XGBoostと訓練データを用いて、`2.` で得られた特徴量を入力�
 ## 7. 特徴選択
 
 `5.` または `6.` の問題設定において、XGBoostの機能でfeature importanceを確認せよ。
-また、feature importanceの上位10個の特徴量のみを用いて解け。
+また、feature importanceの上位10個の特徴量のみを用いて同じ問題を解け。
 
 ## 8. BERT
 
